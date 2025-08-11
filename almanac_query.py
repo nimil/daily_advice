@@ -9,7 +9,6 @@ from typing import Dict, Any, Optional, List
 import threading
 from queue import Queue
 from flask import current_app
-from app_context import app  # 改用新的导入
 
 # 创建一个队列来存储待处理的日期
 date_queue = Queue()
@@ -304,14 +303,14 @@ class AlmanacQuery:
             # 需要解释的字段
             fields = ['wuxing', 'chongsha', 'baiji', 'jishen', 'yi', 'xiongshen', 'ji']
             
-            with app.app_context():  # 创建应用上下文
+            with current_app.app_context():  # 创建应用上下文
                 while not date_queue.empty():
                     date = date_queue.get()
                     try:
                         # 从老黄历表获取数据
                         almanac_data = self.query_almanac(date)
                         if not almanac_data or almanac_data.get('error_code') != 0:
-                            app.logger.error(f"获取老黄历数据失败: {date}")
+                            current_app.logger.error(f"获取老黄历数据失败: {date}")
                             continue
                         
                         # 构建字段值字典
@@ -360,14 +359,14 @@ class AlmanacQuery:
                                                 # 保存到缓存
                                                 self.save_almanac_explanation(field, value, explanation_data['answer'])
                                         except json.JSONDecodeError:
-                                            app.logger.error(f"解析AI响应失败: {explanation}")
+                                            current_app.logger.error(f"解析AI响应失败: {explanation}")
                                     else:
-                                        app.logger.error(f"AI返回格式错误: {explanation}")
+                                                                                  current_app.logger.error(f"AI返回格式错误: {explanation}")
                         
-                        app.logger.info(f"处理完成日期: {date}")
+                        current_app.logger.info(f"处理完成日期: {date}")
                         
                     except Exception as e:
-                        app.logger.error(f"处理日期 {date} 失败: {str(e)}")
+                        current_app.logger.error(f"处理日期 {date} 失败: {str(e)}")
                     
                     # 标记任务完成
                     date_queue.task_done()

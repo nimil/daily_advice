@@ -6,6 +6,7 @@ import logging
 from solar_terms_api import get_cached_daily_advice, get_current_date
 from almanac_query import AlmanacQuery
 import os
+import threading
 
 def init_scheduler(app):
     """
@@ -75,9 +76,16 @@ def init_scheduler(app):
     
     # 启动调度器
     scheduler.start()
-    # 立即执行每日建议缓存
-    fetch_daily_advice()
-    app.logger.info("定时任务调度器已启动")
+    # 异步执行每日建议缓存，避免阻塞应用启动
+    def run_fetch_daily_advice_async():
+        try:
+            fetch_daily_advice()
+        except Exception as e:
+            app.logger.error(f"异步执行每日建议缓存失败: {str(e)}")
+    
+    thread = threading.Thread(target=run_fetch_daily_advice_async, daemon=True)
+    thread.start()
+    app.logger.info("定时任务调度器已启动，每日建议缓存将在后台异步执行")
     
     # 保存调度器实例到应用配置中
     app.scheduler = scheduler 

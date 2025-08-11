@@ -1,18 +1,20 @@
 from flask import make_response, request
-from flask.json import JSONEncoder
 import json
 from scheduler import init_scheduler
-from solar_terms_api import solar_terms_bp
 import logging
 from logging.handlers import RotatingFileHandler
 import pytz
 from datetime import datetime
 from app_context import app  # 导入应用实例
 
-class CustomJSONEncoder(JSONEncoder):
+# 注册蓝图
+from solar_terms_api import solar_terms_bp
+app.register_blueprint(solar_terms_bp)
+
+class CustomJSONEncoder:
     def default(self, obj):
         try:
-            return super().default(obj)
+            return str(obj)
         except TypeError:
             return str(obj)
             
