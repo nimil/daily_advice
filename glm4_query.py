@@ -1,5 +1,5 @@
 import logging
-from zhipuai import ZhipuAI
+from zai import ZhipuAiClient
 from typing import Dict, Any, List
 import json
 from solar_terms_query import SolarTermsQuery
@@ -9,6 +9,7 @@ from holiday_query import HolidayQuery
 from flask import current_app
 import pytz
 from life_suggestion_query import LifeSuggestionQuery
+
 
 class GLM4Query:
     """智谱AI GLM-4 查询类"""
@@ -20,7 +21,7 @@ class GLM4Query:
         Args:
             api_key: 智谱AI API Key
         """
-        self.client = ZhipuAI(api_key=api_key)
+        self.client = ZhipuAiClient(api_key=api_key)
         self.model = "glm-4.5"  # 使用最新的GLM-4模型
         
     def query(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
@@ -35,7 +36,13 @@ class GLM4Query:
             Dict: API返回的结果
         """
         try:
-            current_app.logger.info(f"开始发送请求: {messages}")
+            # 检查是否有Flask应用上下文
+            try:
+                current_app.logger.info(f"开始发送请求: {messages}")
+            except RuntimeError:
+                # 如果没有Flask上下文，使用普通logging
+                logging.info(f"开始发送请求: {messages}")
+                
             # 发送请求
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -71,10 +78,11 @@ class GLM4Query:
             date_str = current_date.strftime('%Y-%m-%d')
             
             # 初始化查询类
-            solar_terms = SolarTermsQuery("5b71ee4243a804d6601641093d8a4cbe")
-            almanac = AlmanacQuery("68c8a6c0be8e9cd53cd92235fb99b287")
-            holiday = HolidayQuery("1a14f196bfb12cb84b609a8272f750d4")
-            life_suggestion = LifeSuggestionQuery("SEuAOXtlQ5l9R7URP")
+            from config import config
+            solar_terms = SolarTermsQuery(config.SOLAR_TERMS_API_KEY)
+            almanac = AlmanacQuery(config.ALMANAC_API_KEY)
+            holiday = HolidayQuery(config.HOLIDAY_API_KEY)
+            life_suggestion = LifeSuggestionQuery(config.LIFE_SUGGESTION_API_KEY)
 
             # 获取节气信息
             solar_result = solar_terms.get_current_solar_term(date_str)
