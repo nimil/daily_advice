@@ -1,0 +1,18 @@
+# 排除虚拟环境
+venv/
+__pycache__/
+data/
+*.pyc
+*.pyo
+
+# 排除日志文件
+*.log
+
+# 排除其他不需要的文件
+*.tmp
+*.bak
+*.swp
+
+# 排除文档
+*.md
+*.tar

@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  wecom-kf:
+    image: wecom-kf:latest
+    container_name: wecom-kf
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: always
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - CORP_ID=${CORP_ID}
+      - CORP_SECRET=${CORP_SECRET}
+      - OPEN_KFID=${OPEN_KFID}
+      - EXTERNAL_USERID=${EXTERNAL_USERID}
+      - SOLAR_TERMS_API_KEY=${SOLAR_TERMS_API_KEY}
+      - ALMANAC_API_KEY=${ALMANAC_API_KEY}
+      - GLM4_API_KEY=${GLM4_API_KEY}
+      - LIFE_SUGGESTION_API_KEY=${LIFE_SUGGESTION_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - HOLIDAY_API_KEY=${HOLIDAY_API_KEY}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
