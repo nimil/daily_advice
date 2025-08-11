@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv
 
 # 加载.env文件
@@ -37,7 +37,7 @@ class Config:
     THREADS = int(os.getenv('THREADS', 4))
     
     @classmethod
-    def validate_required_keys(cls) -> list[str]:
+    def validate_required_keys(cls) -> List[str]:
         """验证必需的配置项"""
         required_keys = [
             'CORP_ID', 'CORP_SECRET', 'OPEN_KFID', 'EXTERNAL_USERID',

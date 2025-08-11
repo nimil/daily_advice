@@ -121,7 +121,7 @@ ehthumbs.db
 Thumbs.db
 
 # 项目特定
-logs/*.log
+logs/
 data/*.db
 *.tar
 *.zip
