@@ -10,8 +10,11 @@ COPY requirements.txt .
 # 安装依赖
 RUN pip install -r requirements.txt
 
-# 复制应用代码
+# 复制应用代码（排除敏感文件）
 COPY . .
+
+# 删除敏感文件（如果存在）
+RUN rm -f .env .env.local .env.production .env.staging
 
 # 创建日志目录
 RUN mkdir -p logs && chmod 777 logs

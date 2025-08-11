@@ -6,7 +6,11 @@
 
 import os
 import sys
+from dotenv import load_dotenv
 from config import config
+
+# 确保加载.env文件
+load_dotenv()
 
 def validate_config():
     """验证配置项"""
