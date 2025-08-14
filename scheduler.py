@@ -5,6 +5,8 @@ import pytz
 import logging
 from solar_terms_api import get_cached_daily_advice, get_current_date
 from almanac_query import AlmanacQuery
+from feishu_bot import feishu_bot
+from news_integration_api import NewsIntegrationAPI
 import os
 import threading
 
@@ -56,6 +58,42 @@ def init_scheduler(app):
             except Exception as e:
                 app.logger.error(f"老黄历数据获取任务异常: {str(e)}")
     
+    def send_daily_news_to_feishu():
+        """发送每日新闻到飞书的任务"""
+        with app.app_context():
+            try:
+                current_time = datetime.now()
+                app.logger.info(f"开始执行飞书新闻推送任务: {current_time}")
+                
+                # 获取群组ID（可以从环境变量或配置中获取）
+                chat_id = os.getenv('FEISHU_CHAT_ID', '')
+                if not chat_id:
+                    app.logger.error("未配置飞书群组ID，跳过新闻推送")
+                    return
+                
+                # 初始化新闻整合API
+                news_api = NewsIntegrationAPI()
+                
+                # 获取所有新闻源数据
+                news_data = news_api.fetch_all_news()
+                
+                # 使用GLM4整合和去重
+                integrated_result = news_api.integrate_news_with_glm4(news_data)
+                
+                if integrated_result['error_code'] == 0:
+                    # 发送新闻消息到飞书
+                    success = feishu_bot.send_news_message(chat_id, integrated_result)
+                    
+                    if success:
+                        app.logger.info(f"成功发送每日新闻到飞书 - {current_time.strftime('%H:%M')}")
+                    else:
+                        app.logger.error("发送每日新闻到飞书失败")
+                else:
+                    app.logger.error(f"新闻整合失败: {integrated_result.get('message')}")
+                    
+            except Exception as e:
+                app.logger.error(f"飞书新闻推送任务异常: {str(e)}")
+    
     # 添加每小时刷新缓存的任务
     scheduler.add_job(
         func=fetch_daily_advice,
@@ -65,7 +103,25 @@ def init_scheduler(app):
         replace_existing=True
     )
     
-    # 添加每天获取老黄历数据的任务
+    # 添加每天早上8点发送新闻到飞书的任务
+    scheduler.add_job(
+        func=send_daily_news_to_feishu,
+        trigger=CronTrigger(hour='10', minute='0'),  # 每天早上8点执行
+        id='send_daily_news_to_feishu_morning',
+        name='发送每日新闻到飞书（早10点）',
+        replace_existing=True
+    )
+    
+    # 添加每天下午1点半发送新闻到飞书的任务
+    scheduler.add_job(
+        func=send_daily_news_to_feishu,
+        trigger=CronTrigger(hour='14', minute='30'),  # 每天下午2点半执行
+        id='send_daily_news_to_feishu_afternoon',
+        name='发送每日新闻到飞书（下午2点半）',
+        replace_existing=True
+    )
+    
+    #添加每天获取老黄历数据的任务
     # scheduler.add_job(
     #     func=fetch_almanac_data,
     #     trigger=CronTrigger(hour='0', minute='5'),  # 每天凌晨0点5分执行

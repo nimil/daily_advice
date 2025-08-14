@@ -26,6 +26,10 @@ class Config:
     DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', '')
     HOLIDAY_API_KEY = os.getenv('HOLIDAY_API_KEY', '')
     
+    # 飞书机器人配置
+    FEISHU_APP_ID = os.getenv('FEISHU_APP_ID', '')
+    FEISHU_APP_SECRET = os.getenv('FEISHU_APP_SECRET', '')
+    
     # 数据库路径
     SOLAR_TERMS_DB_PATH = os.getenv('SOLAR_TERMS_DB_PATH', 'data/solar_terms.db')
     ALMANAC_DB_PATH = os.getenv('ALMANAC_DB_PATH', 'data/almanac.db')
@@ -42,7 +46,8 @@ class Config:
         required_keys = [
             'CORP_ID', 'CORP_SECRET', 'OPEN_KFID', 'EXTERNAL_USERID',
             'SOLAR_TERMS_API_KEY', 'ALMANAC_API_KEY', 'GLM4_API_KEY',
-            'LIFE_SUGGESTION_API_KEY', 'DEEPSEEK_API_KEY', 'HOLIDAY_API_KEY'
+            'LIFE_SUGGESTION_API_KEY', 'DEEPSEEK_API_KEY', 'HOLIDAY_API_KEY',
+            'FEISHU_APP_ID', 'FEISHU_APP_SECRET'
         ]
         
         missing_keys = []

@@ -9,9 +9,15 @@ from app_context import app  # 导入应用实例
 
 # 注册蓝图
 from solar_terms_api import solar_terms_bp
-app.register_blueprint(solar_terms_bp)
+from news_integration_api import news_integration_bp
 
-class CustomJSONEncoder:
+app.register_blueprint(solar_terms_bp)
+app.register_blueprint(news_integration_bp)
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
     def default(self, obj):
         try:
             return str(obj)
