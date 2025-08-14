@@ -870,6 +870,8 @@ def test_feishu_news_push():
         JSON: 推送结果
     """
     try:
+        import time
+        start_time = time.time()
         current_app.logger.info("开始测试飞书新闻推送")
         
         # 从请求中获取群组ID
@@ -889,27 +891,43 @@ def test_feishu_news_push():
         
         # 获取所有新闻源数据
         print("📰 获取新闻数据...")
+        news_start = time.time()
         news_data = news_api.fetch_all_news()
+        news_time = time.time() - news_start
+        print(f"⏱️ 新闻获取耗时: {news_time:.2f}秒")
         
         # 使用GLM4整合和去重
         print("🤖 整合新闻数据...")
+        glm_start = time.time()
         integrated_result = news_api.integrate_news_with_glm4(news_data)
+        glm_time = time.time() - glm_start
+        print(f"⏱️ GLM4处理耗时: {glm_time:.2f}秒")
         
         if integrated_result['error_code'] == 0:
             print("✅ 新闻整合成功，开始发送到飞书...")
             # 发送新闻消息到飞书
+            feishu_start = time.time()
             success = feishu_bot.send_news_message(chat_id, integrated_result)
+            feishu_time = time.time() - feishu_start
+            print(f"⏱️ 飞书发送耗时: {feishu_time:.2f}秒")
             
             if success:
-                current_app.logger.info("飞书新闻推送测试成功")
-                print("✅ 飞书新闻推送成功")
+                total_time = time.time() - start_time
+                current_app.logger.info(f"飞书新闻推送测试成功，总耗时: {total_time:.2f}秒")
+                print(f"✅ 飞书新闻推送成功，总耗时: {total_time:.2f}秒")
                 return jsonify({
                     'error_code': 0,
                     'message': '飞书新闻推送成功',
                     'data': {
                         'chat_id': chat_id,
                         'news_count': len(integrated_result.get('data', {}).get('news_list', [])),
-                        'push_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        'push_time': datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S'),
+                        'performance': {
+                            'news_fetch_time': f"{news_time:.2f}s",
+                            'glm4_process_time': f"{glm_time:.2f}s",
+                            'feishu_send_time': f"{feishu_time:.2f}s",
+                            'total_time': f"{total_time:.2f}s"
+                        }
                     }
                 })
             else:

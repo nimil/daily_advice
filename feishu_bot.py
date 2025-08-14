@@ -10,6 +10,7 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import time
+import pytz
 from config import config
 
 class FeishuBot:
@@ -78,7 +79,7 @@ class FeishuBot:
         """
         try:
             # 检查令牌是否还有效
-            if self.access_token and self.token_expires_at and datetime.now() < self.token_expires_at:
+            if self.access_token and self.token_expires_at and datetime.now(pytz.timezone('Asia/Shanghai')) < self.token_expires_at:
                 return self.access_token
             
             # 获取新的访问令牌
@@ -100,7 +101,7 @@ class FeishuBot:
                 self.access_token = result.get('tenant_access_token')
                 # 设置过期时间（提前5分钟过期）
                 expires_in = result.get('expire', 7200) - 300
-                self.token_expires_at = datetime.now() + timedelta(seconds=expires_in)
+                self.token_expires_at = datetime.now(pytz.timezone('Asia/Shanghai')) + timedelta(seconds=expires_in)
                 
                 logging.info("成功获取飞书访问令牌")
                 return self.access_token
@@ -241,7 +242,7 @@ class FeishuBot:
             Dict: 飞书富文本消息格式
         """
         try:
-            current_time = datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')
+            current_time = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y年%m月%d日 %H:%M:%S')
             
             # 提取新闻数据 - 参照HTML格式的取值方式
             news_list = news_data.get('data', {}).get('news_list', [])
@@ -409,7 +410,7 @@ class FeishuBot:
             Dict: 飞书交互式消息格式
         """
         try:
-            current_time = datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')
+            current_time = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y年%m月%d日 %H:%M:%S')
             
             # 提取新闻数据
             news_list = news_data.get('data', {}).get('news_list', [])

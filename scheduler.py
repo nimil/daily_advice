@@ -62,7 +62,7 @@ def init_scheduler(app):
         """发送每日新闻到飞书的任务"""
         with app.app_context():
             try:
-                current_time = datetime.now()
+                current_time = datetime.now(pytz.timezone('Asia/Shanghai'))
                 app.logger.info(f"开始执行飞书新闻推送任务: {current_time}")
                 
                 # 获取群组ID（可以从环境变量或配置中获取）
