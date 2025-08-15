@@ -328,7 +328,20 @@ class FeishuBot:
                     ])
                 
                 # 新闻元信息 - 使用映射后的来源
-                time_display = pub_date if pub_date and pub_date.strip() else "未知时间"
+                # 处理pub_date，可能是字符串或整数
+                if pub_date:
+                    if isinstance(pub_date, str):
+                        time_display = pub_date.strip() if pub_date.strip() else "未知时间"
+                    elif isinstance(pub_date, int):
+                        # 如果是时间戳，转换为可读格式
+                        try:
+                            time_display = datetime.fromtimestamp(pub_date).strftime('%Y-%m-%d %H:%M:%S')
+                        except (ValueError, OSError):
+                            time_display = "未知时间"
+                    else:
+                        time_display = str(pub_date)
+                else:
+                    time_display = "未知时间"
                 impact = news.get('impact', '')
                 
                 content["post"]["zh_cn"]["content"].append([
@@ -467,7 +480,20 @@ class FeishuBot:
                 mapped_source = self.get_mapped_sources(source)
                 
                 # 新闻标题和链接
-                time_display = pub_date if pub_date and pub_date.strip() else "未知时间"
+                # 处理pub_date，可能是字符串或整数
+                if pub_date:
+                    if isinstance(pub_date, str):
+                        time_display = pub_date.strip() if pub_date.strip() else "未知时间"
+                    elif isinstance(pub_date, int):
+                        # 如果是时间戳，转换为可读格式
+                        try:
+                            time_display = datetime.fromtimestamp(pub_date).strftime('%Y-%m-%d %H:%M:%S')
+                        except (ValueError, OSError):
+                            time_display = "未知时间"
+                    else:
+                        time_display = str(pub_date)
+                else:
+                    time_display = "未知时间"
                 impact = news.get('impact', '')
                 news_content = f"{i}. **{title}**\n"
                 if news_summary:
