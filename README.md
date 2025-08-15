@@ -1,159 +1,104 @@
-# 每日建议服务
+# 智能新闻汇总服务
 
-一个基于Flask的每日建议服务，提供节气养生、老黄历、天气等信息，支持JSON和HTML格式输出。
+一个基于Flask的智能新闻汇总服务，集成多个新闻源，使用AI进行新闻整合、去重和分类，支持飞书机器人推送和HTML格式展示。
+
+## 功能特性
+
+### 📰 新闻功能
+- 🔄 **多源新闻整合**：支持金十数据、财联社、华尔街见闻等多个新闻源
+- 🤖 **AI智能处理**：使用GLM4进行新闻去重、分类和影响分析
+- 📊 **影响分析**：自动分析新闻对经济的影响（正向/负向）
+- 📱 **飞书推送**：支持富文本和交互式消息格式
+- 🌐 **HTML展示**：生成美观的HTML新闻页面
+- ⏰ **定时推送**：支持定时发送新闻汇总
+
+### 🕐 时间管理
+- 🌍 **时区统一**：统一使用北京时间（Asia/Shanghai）
+- 📅 **定时任务**：支持自定义时间发送新闻
+- 🔄 **自动调度**：基于APScheduler的任务调度
+
+### 🏗️ 技术特性
+- 🐳 **Docker部署**：完整的容器化部署方案
+- 📝 **日志管理**：详细的日志记录和监控
+- 🔧 **配置管理**：环境变量配置，安全可靠
+- 📊 **性能监控**：接口性能统计和分析
+
+## 快速开始
+
+### 环境要求
+- Python 3.8+
+- Docker & Docker Compose
+- 相关API密钥（GLM4、飞书等）
+
+### 1. 克隆项目
+```bash
+git clone <repository-url>
+cd wecometest
+```
+
+### 2. 配置环境变量
+```bash
+# 复制配置模板
+cp env.example .env
+
+# 编辑配置文件，填入必要的API密钥
+vim .env
+```
+
+### 3. 使用Docker部署
+```bash
+# 构建镜像
+docker-compose build
+
+# 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+```
 
 ## 配置说明
 
 ### 环境变量配置
 
-项目使用环境变量来管理敏感信息。请按照以下步骤配置：
+项目使用环境变量管理配置，主要包含：
 
-1. **复制配置模板**：
-   ```bash
-   cp env.example .env
-   ```
+```bash
+# 飞书机器人配置
+FEISHU_APP_ID=your_app_id
+FEISHU_APP_SECRET=your_app_secret
+FEISHU_CHAT_ID=your_chat_id
 
-2. **编辑配置文件**：
-   在 `.env` 文件中填入正确的配置值：
-   ```bash
-   # 企业微信配置
-   CORP_ID=your_corp_id_here
-   CORP_SECRET=your_corp_secret_here
-   OPEN_KFID=your_open_kfid_here
-   EXTERNAL_USERID=your_external_userid_here
-   
-   # API密钥配置
-   SOLAR_TERMS_API_KEY=your_solar_terms_api_key_here
-   ALMANAC_API_KEY=your_almanac_api_key_here
-   GLM4_API_KEY=your_glm4_api_key_here
-   LIFE_SUGGESTION_API_KEY=your_life_suggestion_api_key_here
-   DEEPSEEK_API_KEY=your_deepseek_api_key_here
-   HOLIDAY_API_KEY=your_holiday_api_key_here
-   ```
+# AI服务配置
+GLM4_API_KEY=your_glm4_api_key
 
-3. **验证配置**：
-   ```bash
-   python validate_config.py
-   ```
+# 其他服务配置
+SOLAR_TERMS_API_KEY=your_api_key
+ALMANAC_API_KEY=your_api_key
+LIFE_SUGGESTION_API_KEY=your_api_key
+DEEPSEEK_API_KEY=your_api_key
+HOLIDAY_API_KEY=your_api_key
+```
 
 ### 安全注意事项
-
 - ⚠️ **不要将 `.env` 文件提交到版本控制系统**
 - ⚠️ **不要将API密钥硬编码在代码中**
-- ✅ **使用环境变量或配置文件管理敏感信息**
+- ✅ **使用环境变量管理敏感信息**
 - ✅ **定期轮换API密钥**
-
-## 功能特性
-
-- 🌤️ 实时天气信息查询
-- 📅 老黄历宜忌查询
-- 🌿 节气养生建议
-- 🍽️ 时令饮食建议
-- 📧 HTML邮件格式支持
-- 🔄 自动缓存机制
-- ⏰ 定时任务调度
-
-## Docker 部署
-
-### macOS 本地构建
-
-在macOS上构建镜像并打包：
-
-```bash
-# 构建镜像（指定linux/amd64平台）
-docker build --platform linux/amd64 -t wecom-kf:latest .
-
-# 保存镜像为tar文件
-docker save -o wecom-kf.tar wecom-kf:latest
-
-# 查看生成的tar文件大小
-ls -lh wecom-kf.tar
-```
-
-### Linux 服务器部署
-
-将tar文件上传到Linux服务器后：
-
-```bash
-# 加载镜像
-docker load -i wecom-kf.tar
-
-# 运行容器
-docker run -d \
-  --name wecom-kf-app \
-  -p 8090:8090 \
-  -e SOLAR_TERMS_API_KEY="your_api_key" \
-  -e ALMANAC_API_KEY="your_api_key" \
-  -e GLM4_API_KEY="your_api_key" \
-  -e DEEPSEEK_API_KEY="your_api_key" \
-  -e LIFE_SUGGESTION_API_KEY="your_api_key" \
-  -v /path/to/data:/app/data \
-  -v /path/to/logs:/app/logs \
-  wecom-kf:latest
-
-# 查看容器状态
-docker ps
-
-# 查看容器日志
-docker logs wecom-kf-app
-
-# 停止容器
-docker stop wecom-kf-app
-
-# 删除容器
-docker rm wecom-kf-app
-```
-
-### 一键部署脚本
-
-创建 `deploy.sh` 脚本：
-
-```bash
-#!/bin/bash
-
-# 部署脚本
-echo "开始部署每日建议服务..."
-
-# 停止并删除旧容器
-docker stop wecom-kf-app 2>/dev/null || true
-docker rm wecom-kf-app 2>/dev/null || true
-
-# 加载镜像
-echo "加载Docker镜像..."
-docker load -i wecom-kf.tar
-
-# 运行新容器
-echo "启动容器..."
-docker run -d \
-  --name wecom-kf-app \
-  -p 8090:8090 \
-  -e SOLAR_TERMS_API_KEY="${SOLAR_TERMS_API_KEY}" \
-  -e ALMANAC_API_KEY="${ALMANAC_API_KEY}" \
-  -e GLM4_API_KEY="${GLM4_API_KEY}" \
-  -e DEEPSEEK_API_KEY="${DEEPSEEK_API_KEY}" \
-  -e LIFE_SUGGESTION_API_KEY="${LIFE_SUGGESTION_API_KEY}" \
-  -v /opt/wecom-kf/data:/app/data \
-  -v /opt/wecom-kf/logs:/app/logs \
-  --restart unless-stopped \
-  wecom-kf:latest
-
-# 等待服务启动
-echo "等待服务启动..."
-sleep 10
-
-# 检查服务状态
-if curl -f http://localhost:8090/api/daily_advice >/dev/null 2>&1; then
-    echo "✅ 服务部署成功！"
-    echo "访问地址: http://localhost:8090"
-else
-    echo "❌ 服务启动失败，请检查日志"
-    docker logs wecom-kf-app
-fi
-```
 
 ## API 接口
 
-### 基础接口
+### 新闻相关接口
+
+| 接口 | 方法 | 描述 | 返回格式 |
+|------|------|------|----------|
+| `/news/integrated` | GET | 获取整合后的新闻数据 | JSON |
+| `/news/html` | GET | 获取新闻HTML页面 | HTML |
+| `/news/feishu/test` | POST | 测试飞书新闻推送 | JSON |
+| `/news/sources` | GET | 获取支持的新闻源 | JSON |
+| `/news/health` | GET | 新闻服务健康检查 | JSON |
+
+### 其他功能接口
 
 | 接口 | 方法 | 描述 | 返回格式 |
 |------|------|------|----------|
@@ -166,94 +111,141 @@ fi
 ### 使用示例
 
 ```bash
-# 获取每日建议 (JSON)
+# 获取整合新闻数据
+curl http://localhost:8090/news/integrated
+
+# 获取新闻HTML页面
+curl http://localhost:8090/news/html
+
+# 测试飞书推送
+curl -X POST http://localhost:8090/news/feishu/test \
+  -H "Content-Type: application/json" \
+  -d '{"chat_id":"your_chat_id"}'
+
+# 获取每日建议
 curl http://localhost:8090/api/daily_advice
-
-# 获取每日建议 (HTML)
-curl http://localhost:8090/api/daily_advice_html
-
-# 获取天气信息
-curl http://localhost:8090/api/weather
-
-# 获取饮食建议
-curl "http://localhost:8090/api/food_advice?province=山东&term=立秋"
 ```
 
-## 环境变量配置
+## 定时任务
 
-在Linux服务器上设置环境变量：
+### 配置说明
+服务支持定时发送新闻汇总，默认配置：
 
-```bash
-# 编辑环境变量文件
-sudo nano /etc/environment
+- **早上10:00** - 发送早间新闻汇总
+- **下午14:30** - 发送午间新闻汇总
+- **每小时第10分钟** - 刷新缓存数据
 
-# 添加以下内容
-SOLAR_TERMS_API_KEY=your_api_key
-ALMANAC_API_KEY=your_api_key
-GLM4_API_KEY=your_api_key
-DEEPSEEK_API_KEY=your_api_key
-LIFE_SUGGESTION_API_KEY=your_api_key
+### 自定义配置
+可以通过修改 `scheduler.py` 中的CronTrigger来调整执行时间：
 
-# 重新加载环境变量
-source /etc/environment
+```python
+# 示例：修改为早上8点和下午1点半
+scheduler.add_job(
+    func=send_daily_news_to_feishu,
+    trigger=CronTrigger(hour='8', minute='0'),
+    id='send_daily_news_to_feishu_morning',
+    name='发送每日新闻到飞书（早8点）',
+    replace_existing=True
+)
 ```
 
-## 数据持久化
+## Docker 部署
 
-创建数据目录：
-
+### 本地开发
 ```bash
-# 创建数据目录
-sudo mkdir -p /opt/wecom-kf/data
-sudo mkdir -p /opt/wecom-kf/logs
+# 构建镜像
+docker-compose build
 
-# 设置权限
-sudo chown -R 1000:1000 /opt/wecom-kf
-sudo chmod -R 755 /opt/wecom-kf
+# 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f wecom-kf
+```
+
+### 生产部署
+```bash
+# 构建生产镜像
+docker build --platform linux/amd64 -t wecom-kf:latest .
+
+# 保存镜像
+docker save -o wecom-kf.tar wecom-kf:latest
+
+# 在服务器上加载镜像
+docker load -i wecom-kf.tar
+
+# 运行容器
+docker run -d \
+  --name wecom-kf \
+  -p 8090:8090 \
+  -v ./logs:/app/logs \
+  -v ./data:/app/data \
+  --env-file .env \
+  --restart unless-stopped \
+  wecom-kf:latest
+```
+
+### 一键部署脚本
+```bash
+#!/bin/bash
+# deploy.sh
+
+echo "开始部署智能新闻汇总服务..."
+
+# 停止旧容器
+docker stop wecom-kf 2>/dev/null || true
+docker rm wecom-kf 2>/dev/null || true
+
+# 加载镜像
+docker load -i wecom-kf.tar
+
+# 启动新容器
+docker run -d \
+  --name wecom-kf \
+  -p 8090:8090 \
+  -v ./logs:/app/logs \
+  -v ./data:/app/data \
+  --env-file .env \
+  --restart unless-stopped \
+  wecom-kf:latest
+
+echo "✅ 服务部署完成！"
+echo "访问地址: http://localhost:8090"
 ```
 
 ## 监控和维护
 
 ### 查看服务状态
-
 ```bash
 # 查看容器状态
 docker ps -a | grep wecom-kf
 
-# 查看资源使用情况
-docker stats wecom-kf-app
+# 查看资源使用
+docker stats wecom-kf
 
-# 查看日志
-docker logs -f wecom-kf-app
+# 查看实时日志
+docker logs -f wecom-kf
 
-# 查看日志文件
-tail -f /opt/wecom-kf/logs/access.log
+# 查看应用日志
+tail -f logs/access.log
+```
+
+### 健康检查
+```bash
+# 检查新闻服务健康状态
+curl http://localhost:8090/news/health
+
+# 检查整体服务状态
+curl http://localhost:8090/api/daily_advice
 ```
 
 ### 备份和恢复
-
 ```bash
 # 备份数据
-tar -czf wecom-kf-backup-$(date +%Y%m%d).tar.gz /opt/wecom-kf/data
+tar -czf backup-$(date +%Y%m%d).tar.gz data/ logs/
 
 # 备份镜像
 docker save -o wecom-kf-backup-$(date +%Y%m%d).tar wecom-kf:latest
-```
-
-### 更新服务
-
-```bash
-# 停止服务
-docker stop wecom-kf-app
-
-# 备份当前镜像
-docker tag wecom-kf:latest wecom-kf:backup-$(date +%Y%m%d)
-
-# 加载新镜像
-docker load -i wecom-kf-new.tar
-
-# 重新部署
-./deploy.sh
 ```
 
 ## 故障排除
@@ -262,8 +254,8 @@ docker load -i wecom-kf-new.tar
 
 1. **容器启动失败**
    ```bash
-   # 查看详细错误信息
-   docker logs wecom-kf-app
+   # 查看详细错误
+   docker logs wecom-kf
    
    # 检查端口占用
    netstat -tlnp | grep 8090
@@ -272,40 +264,117 @@ docker load -i wecom-kf-new.tar
 2. **API密钥错误**
    ```bash
    # 检查环境变量
-   docker exec wecom-kf-app env | grep API_KEY
+   docker exec wecom-kf env | grep API_KEY
    ```
 
-3. **数据目录权限问题**
+3. **时区问题**
    ```bash
-   # 修复权限
-   sudo chown -R 1000:1000 /opt/wecom-kf
+   # 检查容器时区
+   docker exec wecom-kf date
+   docker exec wecom-kf cat /etc/timezone
+   ```
+
+4. **飞书推送失败**
+   ```bash
+   # 检查飞书配置
+   docker exec wecom-kf env | grep FEISHU
+   
+   # 测试飞书推送
+   curl -X POST http://localhost:8090/news/feishu/test \
+     -H "Content-Type: application/json" \
+     -d '{"chat_id":"your_chat_id"}'
    ```
 
 ### 性能优化
 
 ```bash
-# 限制容器资源使用
+# 限制容器资源
 docker run -d \
-  --name wecom-kf-app \
-  --memory=512m \
+  --name wecom-kf \
+  --memory=1g \
   --cpus=1.0 \
   -p 8090:8090 \
   wecom-kf:latest
 ```
 
-## 注意事项
+## 项目结构
 
-1. **平台兼容性**: 使用 `--platform linux/amd64` 确保在macOS上构建的镜像能在Linux服务器上运行
-2. **数据持久化**: 使用卷挂载确保数据不丢失
-3. **环境变量**: 确保所有必要的API密钥都已正确配置
-4. **网络配置**: 确保8090端口在防火墙中开放
-5. **日志管理**: 定期清理日志文件避免磁盘空间不足
+```
+wecometest/
+├── app.py                 # 主应用入口
+├── app_context.py         # 应用上下文
+├── config.py             # 配置管理
+├── scheduler.py          # 定时任务调度
+├── feishu_bot.py         # 飞书机器人
+├── news_integration_api.py # 新闻整合API
+├── glm4_query.py         # GLM4 AI查询
+├── solar_terms_api.py    # 节气API
+├── almanac_query.py      # 老黄历查询
+├── holiday_query.py      # 节假日查询
+├── life_suggestion_query.py # 生活建议查询
+├── deepseek_query.py     # DeepSeek查询
+├── requirements.txt      # Python依赖
+├── Dockerfile           # Docker镜像配置
+├── docker-compose.yml   # Docker编排配置
+├── env.example          # 环境变量模板
+├── data/               # 数据目录
+├── logs/               # 日志目录
+└── README.md           # 项目说明
+```
+
+## 开发指南
+
+### 本地开发环境
+```bash
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行开发服务器
+python app.py
+```
+
+### 代码规范
+- 使用Python 3.8+
+- 遵循PEP 8代码规范
+- 添加适当的注释和文档
+- 使用类型提示
+
+## 更新日志
+
+### v1.0.0
+- ✅ 多源新闻整合功能
+- ✅ AI智能新闻处理
+- ✅ 飞书机器人推送
+- ✅ HTML新闻页面
+- ✅ 定时任务调度
+- ✅ Docker容器化部署
+- ✅ 时区统一配置
+- ✅ 性能监控功能
+
+## 贡献指南
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开 Pull Request
+
+## 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 联系方式
+
+如有问题或建议，请通过以下方式联系：
+- 提交 Issue
+- 发送邮件
+- 项目讨论区
 
 ---
 
-**部署流程总结**:
-1. macOS构建: `docker build --platform linux/amd64 -t wecom-kf:latest .`
-2. 打包镜像: `docker save -o wecom-kf.tar wecom-kf:latest`
-3. 上传到Linux服务器
-4. Linux加载: `docker load -i wecom-kf.tar`
-5. 运行容器: `docker run -d --name wecom-kf-app -p 8090:8090 wecom-kf:latest`
+**感谢使用智能新闻汇总服务！** 🚀
