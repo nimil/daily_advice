@@ -11,6 +11,7 @@ services:
       - ./data:/app/data
     restart: always
     environment:
+      - TZ=Asia/Shanghai
       - FLASK_ENV=${FLASK_ENV:-development}
       - CORP_ID=${CORP_ID}
       - CORP_SECRET=${CORP_SECRET}
