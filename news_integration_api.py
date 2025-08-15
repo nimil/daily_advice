@@ -209,17 +209,47 @@ class NewsIntegrationAPI:
             - 影响判断要站在中国投资者的角度
             """
             
+            # 打印发送给AI的prompt
+            logging.info("=" * 80)
+            logging.info("📤 发送给新闻AI的PROMPT:")
+            logging.info("=" * 80)
+            logging.info(prompt)
+            logging.info("=" * 80)
+            
             # 调用GLM4处理
             response = self.glm4_client.query([
                 {"role": "system", "content": "你是一个专业的财经信息整合专家，擅长财经新闻整合、去重和分类。请严格按照要求的JSON格式返回结果。"},
                 {"role": "user", "content": prompt}
             ])
             
+            # 打印AI的返回结果
+            logging.info("=" * 80)
+            logging.info("📥 新闻AI的返回结果:")
+            logging.info("=" * 80)
+            logging.info(f"响应状态: {response}")
+            logging.info("=" * 80)
+            
             if response['error_code'] == 0:
                 content = response['data'].choices[0].message.content
+                
+                # 打印AI返回的具体内容
+                logging.info("=" * 80)
+                logging.info("📄 AI返回的原始内容:")
+                logging.info("=" * 80)
+                logging.info(content)
+                logging.info("=" * 80)
+                
                 try:
                     # 解析GLM4响应
                     integrated_data = json.loads(content)
+                    
+                    # 打印解析后的结构化数据
+                    logging.info("=" * 80)
+                    logging.info("✅ 解析后的结构化数据:")
+                    logging.info("=" * 80)
+                    logging.info(json.dumps(integrated_data, ensure_ascii=False, indent=2))
+                    logging.info("=" * 80)
+                    
                     return {
                         'error_code': 0,
                         'message': 'success',
@@ -227,7 +257,12 @@ class NewsIntegrationAPI:
                         'raw_data': news_data
                     }
                 except json.JSONDecodeError as e:
-                    logging.error(f"解析GLM4响应失败: {str(e)}")
+                    logging.error("=" * 80)
+                    logging.error("❌ JSON解析失败:")
+                    logging.error("=" * 80)
+                    logging.error(f"错误信息: {str(e)}")
+                    logging.error(f"原始内容: {content}")
+                    logging.error("=" * 80)
                     return {
                         'error_code': -1,
                         'message': f'解析AI响应失败: {str(e)}',
@@ -235,6 +270,11 @@ class NewsIntegrationAPI:
                         'raw_data': news_data
                     }
             else:
+                logging.error("=" * 80)
+                logging.error("❌ GLM4处理失败:")
+                logging.error("=" * 80)
+                logging.error(f"错误响应: {response}")
+                logging.error("=" * 80)
                 return {
                     'error_code': -1,
                     'message': f'GLM4处理失败: {response["message"]}',
@@ -655,6 +695,41 @@ def get_integrated_news():
         return jsonify({
             'error_code': -1,
             'message': f'获取新闻数据失败: {str(e)}',
+            'data': None
+        }), 500
+
+@news_integration_bp.route('/news/test_ai', methods=['GET'])
+def test_news_ai():
+    """
+    测试新闻AI的prompt和返回结果
+    
+    Returns:
+        JSON: 测试结果，包含prompt和AI返回
+    """
+    try:
+        current_app.logger.info("开始测试新闻AI")
+        
+        # 获取所有新闻源数据
+        news_data = news_api.fetch_all_news()
+        
+        # 使用GLM4整合和去重（会打印详细的prompt和返回日志）
+        integrated_result = news_api.integrate_news_with_glm4(news_data)
+        
+        # 返回测试结果
+        return jsonify({
+            'error_code': 0,
+            'message': '测试完成，请查看日志获取详细的prompt和返回信息',
+            'data': {
+                'test_status': 'completed',
+                'result': integrated_result
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"测试新闻AI失败: {str(e)}")
+        return jsonify({
+            'error_code': -1,
+            'message': f'测试失败: {str(e)}',
             'data': None
         }), 500
 
