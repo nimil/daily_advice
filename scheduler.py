@@ -103,21 +103,21 @@ def init_scheduler(app):
         replace_existing=True
     )
     
-    # 添加每天早上8点发送新闻到飞书的任务
+    # 添加每天早上10点发送新闻到飞书的任务
     scheduler.add_job(
         func=send_daily_news_to_feishu,
-        trigger=CronTrigger(hour='10', minute='0'),  # 每天早上8点执行
+        trigger=CronTrigger(hour='10', minute='0'),  # 每天早上10点执行
         id='send_daily_news_to_feishu_morning',
         name='发送每日新闻到飞书（早10点）',
         replace_existing=True
     )
     
-    # 添加每天下午1点半发送新闻到飞书的任务
+    # 添加每天下午3点半发送新闻到飞书的任务
     scheduler.add_job(
         func=send_daily_news_to_feishu,
-        trigger=CronTrigger(hour='14', minute='30'),  # 每天下午2点半执行
+        trigger=CronTrigger(hour='15', minute='30'),  # 每天下午3点半执行
         id='send_daily_news_to_feishu_afternoon',
-        name='发送每日新闻到飞书（下午2点半）',
+        name='发送每日新闻到飞书（下午3点半）',
         replace_existing=True
     )
     
