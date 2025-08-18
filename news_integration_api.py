@@ -71,18 +71,35 @@ class NewsIntegrationAPI:
             Dict: 新闻数据
         """
         try:
+            logging.info(f"🔍 开始获取新闻源: {source_name}")
+            logging.info(f"📡 请求URL: {url}")
+            
             response = requests.get(url, timeout=10)
             response.raise_for_status()
+            
+            logging.info(f"✅ {source_name} 请求成功，状态码: {response.status_code}")
+            logging.info(f"📊 {source_name} 响应大小: {len(response.content)} bytes")
+            
             data = response.json()
             
+            logging.info(f"📋 {source_name} 原始响应数据结构: {list(data.keys()) if isinstance(data, dict) else '非字典类型'}")
+            
             if data.get('status') == 'success':
+                items = data.get('items', [])
+                logging.info(f"📰 {source_name} 获取到 {len(items)} 条新闻")
+                
+                # 打印前3条新闻的标题用于调试
+                for i, item in enumerate(items[:3]):
+                    logging.info(f"📄 {source_name} 新闻{i+1}: {item.get('title', '无标题')[:50]}...")
+                
                 return {
                     'error_code': 0,
                     'message': 'success',
                     'source': source_name,
-                    'data': data.get('items', [])
+                    'data': items
                 }
             else:
+                logging.error(f"❌ {source_name} API返回错误状态: {data.get('status')}")
                 return {
                     'error_code': -1,
                     'message': f'API返回错误状态: {data.get("status")}',
@@ -91,7 +108,7 @@ class NewsIntegrationAPI:
                 }
                 
         except requests.RequestException as e:
-            logging.error(f"请求{source_name}新闻源失败: {str(e)}")
+            logging.error(f"❌ 请求{source_name}新闻源失败: {str(e)}")
             return {
                 'error_code': -1,
                 'message': f'请求失败: {str(e)}',
@@ -99,7 +116,7 @@ class NewsIntegrationAPI:
                 'data': []
             }
         except json.JSONDecodeError as e:
-            logging.error(f"解析{source_name}新闻源JSON失败: {str(e)}")
+            logging.error(f"❌ 解析{source_name}新闻源JSON失败: {str(e)}")
             return {
                 'error_code': -1,
                 'message': f'JSON解析失败: {str(e)}',
@@ -114,21 +131,42 @@ class NewsIntegrationAPI:
         Returns:
             Dict: 所有新闻源的数据
         """
+        logging.info("🚀 开始获取所有新闻源数据")
+        logging.info(f"📋 配置的新闻源: {list(self.news_sources.keys())}")
+        
         all_news = {}
+        total_news_count = 0
         
         for source_name, url in self.news_sources.items():
             try:
+                logging.info(f"🔄 处理新闻源: {source_name}")
                 result = self.fetch_news_from_source(source_name, url)
                 all_news[source_name] = result
-                current_app.logger.info(f"成功获取{source_name}新闻源数据")
+                
+                if result['error_code'] == 0:
+                    news_count = len(result.get('data', []))
+                    total_news_count += news_count
+                    current_app.logger.info(f"✅ 成功获取{source_name}新闻源数据，共{news_count}条新闻")
+                else:
+                    current_app.logger.error(f"❌ {source_name}新闻源获取失败: {result['message']}")
+                    
             except Exception as e:
-                current_app.logger.error(f"获取{source_name}新闻源数据失败: {str(e)}")
+                current_app.logger.error(f"❌ 获取{source_name}新闻源数据异常: {str(e)}")
                 all_news[source_name] = {
                     'error_code': -1,
                     'message': f'获取失败: {str(e)}',
                     'source': source_name,
                     'data': []
                 }
+        
+        logging.info(f"📊 所有新闻源获取完成，总计: {total_news_count}条新闻")
+        
+        # 打印每个新闻源的详细统计
+        for source_name, result in all_news.items():
+            if result['error_code'] == 0:
+                logging.info(f"📈 {source_name}: {len(result.get('data', []))}条新闻")
+            else:
+                logging.info(f"❌ {source_name}: 获取失败 - {result['message']}")
         
         return all_news
     
@@ -143,13 +181,20 @@ class NewsIntegrationAPI:
             Dict: 整合后的新闻数据
         """
         try:
+            logging.info("🤖 开始使用GLM4整合新闻数据")
+            
             # 准备新闻数据用于GLM4处理
             news_items = []
             
+            logging.info("📋 开始处理各新闻源数据...")
             for source_name, source_data in news_data.items():
+                logging.info(f"🔄 处理新闻源: {source_name}")
+                
                 if source_data.get('error_code') == 0:
                     items = source_data.get('data', [])
-                    for item in items:
+                    logging.info(f"📰 {source_name} 有 {len(items)} 条新闻需要处理")
+                    
+                    for i, item in enumerate(items):
                         # 统一新闻项格式
                         news_item = {
                             'source': source_name,
@@ -159,8 +204,17 @@ class NewsIntegrationAPI:
                             'id': item.get('id', '')
                         }
                         news_items.append(news_item)
+                        
+                        # 打印前3条新闻的详细信息用于调试
+                        if i < 3:
+                            logging.info(f"📄 {source_name} 新闻{i+1}: 标题='{news_item['title'][:50]}...', 来源='{news_item['source']}', 时间='{news_item['pubDate']}'")
+                else:
+                    logging.warning(f"⚠️ {source_name} 新闻源数据无效: {source_data.get('message', '未知错误')}")
+            
+            logging.info(f"📊 总共收集到 {len(news_items)} 条新闻用于AI处理")
             
             if not news_items:
+                logging.error("❌ 没有可用的新闻数据")
                 return {
                     'error_code': -1,
                     'message': '没有可用的新闻数据',
@@ -169,6 +223,9 @@ class NewsIntegrationAPI:
             
             # 构建GLM4提示词
             current_time = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y年%m月%d日 %H:%M:%S')
+            
+            logging.info(f"⏰ 当前时间: {current_time}")
+            logging.info(f"📝 准备构建GLM4提示词，新闻数据大小: {len(news_items)} 条")
             
             prompt = f"""
             请帮我整合和去重以下来自多个新闻源的新闻数据。当前时间：{current_time}
@@ -202,6 +259,8 @@ class NewsIntegrationAPI:
     
             """
             
+            logging.info(f"📤 构建的提示词长度: {len(prompt)} 字符")
+            
             # 打印发送给AI的prompt
             logging.info("=" * 80)
             logging.info("📤 发送给新闻AI的PROMPT:")
@@ -210,10 +269,17 @@ class NewsIntegrationAPI:
             logging.info("=" * 80)
             
             # 调用GLM4处理
+            logging.info("🤖 开始调用GLM4处理新闻数据...")
+            glm4_start_time = datetime.now()
+            
             response = self.glm4_client.query([
                 {"role": "system", "content": "你是一个专业的财经信息整合专家，擅长财经新闻整合、去重和分类。请严格按照要求的JSON格式返回结果。"},
                 {"role": "user", "content": prompt}
             ])
+            
+            glm4_end_time = datetime.now()
+            glm4_duration = (glm4_end_time - glm4_start_time).total_seconds()
+            logging.info(f"⏱️ GLM4处理耗时: {glm4_duration:.2f}秒")
             
             # 打印AI的返回结果
             logging.info("=" * 80)
@@ -225,6 +291,8 @@ class NewsIntegrationAPI:
             if response['error_code'] == 0:
                 content = response['data'].choices[0].message.content
                 
+                logging.info(f"📄 AI返回内容长度: {len(content)} 字符")
+                
                 # 打印AI返回的具体内容
                 logging.info("=" * 80)
                 logging.info("📄 AI返回的原始内容:")
@@ -234,7 +302,19 @@ class NewsIntegrationAPI:
                 
                 try:
                     # 解析GLM4响应
+                    logging.info("🔍 开始解析AI返回的JSON数据...")
                     integrated_data = json.loads(content)
+                    
+                    logging.info(f"✅ JSON解析成功，数据结构: {list(integrated_data.keys()) if isinstance(integrated_data, dict) else '非字典类型'}")
+                    
+                    # 检查关键字段
+                    if 'news_list' in integrated_data:
+                        news_list = integrated_data['news_list']
+                        logging.info(f"📰 AI返回的新闻列表数量: {len(news_list)} 条")
+                        
+                        # 打印前3条新闻的标题用于验证
+                        for i, news in enumerate(news_list[:3]):
+                            logging.info(f"📄 AI返回新闻{i+1}: 标题='{news.get('title', '无标题')[:50]}...', 来源='{news.get('source', '无来源')}'")
                     
                     # 打印解析后的结构化数据
                     logging.info("=" * 80)
@@ -254,7 +334,9 @@ class NewsIntegrationAPI:
                     logging.error("❌ JSON解析失败:")
                     logging.error("=" * 80)
                     logging.error(f"错误信息: {str(e)}")
-                    logging.error(f"原始内容: {content}")
+                    logging.error(f"原始内容长度: {len(content)} 字符")
+                    logging.error(f"原始内容前500字符: {content[:500]}")
+                    logging.error(f"原始内容后500字符: {content[-500:]}")
                     logging.error("=" * 80)
                     return {
                         'error_code': -1,
@@ -671,19 +753,48 @@ def get_integrated_news():
         JSON: 整合后的新闻数据
     """
     try:
+        logging.info("🚀 ========== 开始获取整合新闻数据 ==========")
+        start_time = datetime.now()
+        
         current_app.logger.info("开始获取整合新闻数据")
         
         # 获取所有新闻源数据
+        logging.info("📡 第一步：获取所有新闻源数据")
         news_data = news_api.fetch_all_news()
         
+        # 统计原始数据
+        total_raw_news = 0
+        for source_name, source_data in news_data.items():
+            if source_data.get('error_code') == 0:
+                total_raw_news += len(source_data.get('data', []))
+        logging.info(f"📊 原始新闻数据统计：总计 {total_raw_news} 条新闻")
+        
         # 使用GLM4整合和去重
+        logging.info("🤖 第二步：使用GLM4整合和去重新闻数据")
         integrated_result = news_api.integrate_news_with_glm4(news_data)
         
+        # 统计整合后的数据
+        if integrated_result['error_code'] == 0:
+            integrated_news_count = len(integrated_result.get('data', {}).get('news_list', []))
+            logging.info(f"📈 整合后新闻数据统计：{integrated_news_count} 条新闻")
+            
+            # 检查是否有新闻被截断
+            if integrated_news_count < total_raw_news * 0.5:  # 如果整合后少于原始数据的50%
+                logging.warning(f"⚠️ 警告：整合后新闻数量({integrated_news_count})明显少于原始数量({total_raw_news})，可能存在数据截断")
+        else:
+            logging.error(f"❌ 新闻整合失败：{integrated_result.get('message')}")
+        
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        logging.info(f"⏱️ 整个处理流程耗时：{duration:.2f}秒")
+        
         current_app.logger.info("新闻数据整合完成")
+        logging.info("✅ ========== 获取整合新闻数据完成 ==========")
         
         return jsonify(integrated_result)
         
     except Exception as e:
+        logging.error(f"❌ 获取整合新闻数据异常：{str(e)}")
         current_app.logger.error(f"获取整合新闻数据失败: {str(e)}")
         return jsonify({
             'error_code': -1,
@@ -735,20 +846,45 @@ def get_raw_news():
         JSON: 原始新闻数据
     """
     try:
+        logging.info("🔍 ========== 开始获取原始新闻数据 ==========")
         current_app.logger.info("开始获取原始新闻数据")
         
         # 获取所有新闻源数据
         news_data = news_api.fetch_all_news()
         
+        # 详细统计每个新闻源的数据
+        logging.info("📊 原始新闻数据详细统计：")
+        total_news = 0
+        for source_name, source_data in news_data.items():
+            if source_data.get('error_code') == 0:
+                news_count = len(source_data.get('data', []))
+                total_news += news_count
+                logging.info(f"  📰 {source_name}: {news_count} 条新闻")
+                
+                # 打印前3条新闻的标题
+                for i, item in enumerate(source_data.get('data', [])[:3]):
+                    title = item.get('title', '无标题')
+                    logging.info(f"    {i+1}. {title[:60]}...")
+            else:
+                logging.info(f"  ❌ {source_name}: 获取失败 - {source_data.get('message')}")
+        
+        logging.info(f"📈 总计: {total_news} 条新闻")
         current_app.logger.info("原始新闻数据获取完成")
+        logging.info("✅ ========== 原始新闻数据获取完成 ==========")
         
         return jsonify({
             'error_code': 0,
             'message': 'success',
-            'data': news_data
+            'data': news_data,
+            'summary': {
+                'total_news': total_news,
+                'sources_count': len(news_data),
+                'successful_sources': len([s for s in news_data.values() if s.get('error_code') == 0])
+            }
         })
         
     except Exception as e:
+        logging.error(f"❌ 获取原始新闻数据异常：{str(e)}")
         current_app.logger.error(f"获取原始新闻数据失败: {str(e)}")
         return jsonify({
             'error_code': -1,
@@ -772,6 +908,7 @@ def get_news_sources():
             'total_count': len(news_api.news_sources)
         }
     })
+
 
 @news_integration_bp.route('/news/health', methods=['GET'])
 def health_check():
