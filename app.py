@@ -2,7 +2,6 @@ from flask import make_response, request
 import json
 from scheduler import init_scheduler
 import logging
-from logging.handlers import RotatingFileHandler
 import pytz
 from datetime import datetime
 from app_context import app  # 导入应用实例
@@ -54,8 +53,15 @@ app.config.update(
 
 # 配置日志
 if not app.debug:
-    # 创建一个文件处理器，用于记录访问日志
-    file_handler = RotatingFileHandler('logs/access.log', maxBytes=10240, backupCount=10)
+    # 创建一个按日期滚动的文件处理器，用于记录访问日志
+    from logging.handlers import TimedRotatingFileHandler
+    file_handler = TimedRotatingFileHandler(
+        'logs/access.log', 
+        when='midnight',  # 每天午夜滚动
+        interval=1,       # 间隔1天
+        backupCount=30,   # 保留30天的日志
+        encoding='utf-8'  # 确保中文正确显示
+    )
     file_handler.setFormatter(ChinaTimeFormatter(
         '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
     ))
