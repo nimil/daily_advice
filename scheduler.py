@@ -8,6 +8,7 @@ from almanac_query import AlmanacQuery
 from feishu_bot import feishu_bot
 from news_integration_api import NewsIntegrationAPI
 from crypto_news_api import crypto_news_api
+from stock_market_flow import stock_market_flow
 from config import config
 import os
 import threading
@@ -151,6 +152,72 @@ def init_scheduler(app):
             except Exception as e:
                 app.logger.error(f"加密货币新闻推送任务异常: {str(e)}")
     
+    def send_market_flow_with_currency():
+        """发送大盘资金流向和汇率信息（周一到周五下午3:10）"""
+        with app.app_context():
+            try:
+                current_time = datetime.now(pytz.timezone('Asia/Shanghai'))
+                
+                # 检查是否为工作日
+                weekday = current_time.weekday()
+                if weekday >= 5: # Saturday(5) and Sunday(6)
+                    app.logger.info(f"当前为周末，跳过大盘资金流向推送任务: {current_time.strftime('%Y-%m-%d %H:%M')}")
+                    return
+                
+                app.logger.info(f"开始执行大盘资金流向推送任务: {current_time}")
+                chat_id = config.FEISHU_CHAT_ID
+                if not chat_id:
+                    app.logger.error("未配置群组ID，跳过大盘资金流向推送")
+                    return
+                
+                # 获取大盘资金流向数据
+                flow_result = stock_market_flow.get_market_fund_flow()
+                
+                if flow_result['error_code'] == 0:
+                    # 获取市场数据（汇率+黄金价格）
+                    market_result = None
+                    try:
+                        from currency_api import CurrencyAPI
+                        
+                        if config.GOLD_API_KEY:
+                            # 获取汇率和黄金价格
+                            currency_api = CurrencyAPI(config.GOLD_API_KEY)
+                            market_result = currency_api.get_all_market_data()
+                        else:
+                            # 只获取黄金价格（不需要API_KEY）
+                            currency_api = CurrencyAPI("dummy_key")
+                            gold_result = currency_api.get_gold_price()
+                            
+                            if gold_result['error_code'] == 0:
+                                market_result = {
+                                    'error_code': 1,  # 部分成功
+                                    'data': {
+                                        'currency': {},  # 空的汇率数据
+                                        'gold': gold_result['data']  # 黄金价格数据
+                                    }
+                                }
+                    except Exception as e:
+                        app.logger.error(f"市场数据获取异常: {str(e)}")
+                        market_result = None
+                    
+                    # 格式化消息（包含汇率和黄金价格信息）
+                    formatted_result = stock_market_flow.format_fund_flow_message(flow_result, market_result)
+                    
+                    if formatted_result['error_code'] == 0:
+                        success = feishu_bot.send_stock_market_flow_message(chat_id, formatted_result)
+                        if success:
+                            app.logger.info(f"成功发送大盘资金流向和汇率信息到飞书 - {current_time.strftime('%H:%M')}")
+                        else:
+                            app.logger.error("发送大盘资金流向到飞书失败")
+                    else:
+                        app.logger.error(f"格式化大盘资金流向消息失败: {formatted_result.get('message')}")
+                elif flow_result['error_code'] == 2:
+                    app.logger.info(f"没有今日大盘资金流向数据，跳过发送 - {current_time.strftime('%H:%M')}")
+                else:
+                    app.logger.error(f"获取大盘资金流向失败: {flow_result.get('message')}")
+            except Exception as e:
+                app.logger.error(f"大盘资金流向推送任务异常: {str(e)}")
+    
     # 添加每小时刷新缓存的任务
     scheduler.add_job(
         func=fetch_daily_advice,
@@ -184,6 +251,15 @@ def init_scheduler(app):
         trigger=CronTrigger(minute='*/20'),  # 每20分钟执行一次
         id='send_crypto_news_to_feishu',
         name='发送加密货币新闻到飞书（工作日8:30-17:30，每20分钟）',
+        replace_existing=True
+    )
+    
+    # 添加周一到周五下午3:10发送大盘资金流向和汇率信息的任务
+    scheduler.add_job(
+        func=send_market_flow_with_currency,
+        trigger=CronTrigger(hour='15', minute='10'),  # 每天下午3:10执行
+        id='send_market_flow_with_currency',
+        name='发送大盘资金流向和汇率信息（工作日15:10）',
         replace_existing=True
     )
     

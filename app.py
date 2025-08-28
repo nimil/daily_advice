@@ -84,6 +84,13 @@ def after_request(response):
     app.logger.info(f"Request: {request.method} {request.url} - Response: {response.status}")
     return response
 
+# 初始化汇率API
+from config import config
+if config.init_currency_api():
+    app.logger.info("✅ 汇率API初始化成功")
+else:
+    app.logger.warning("⚠️ 汇率API初始化失败（缺少GOLD_API_KEY）")
+
 # 初始化定时任务
 init_scheduler(app)
 

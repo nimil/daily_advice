@@ -30,7 +30,9 @@ class Config:
     FEISHU_APP_ID = os.getenv('FEISHU_APP_ID', '')
     FEISHU_APP_SECRET = os.getenv('FEISHU_APP_SECRET', '')
     FEISHU_CHAT_ID_COIN = os.getenv('FEISHU_CHAT_ID_COIN', '')
-    
+    FEISHU_CHAT_ID = os.getenv('FEISHU_CHAT_ID', '')
+    GOLD_API_KEY = os.getenv('GOLD_API_KEY', '')
+
     # 数据库路径
     SOLAR_TERMS_DB_PATH = os.getenv('SOLAR_TERMS_DB_PATH', 'data/solar_terms.db')
     ALMANAC_DB_PATH = os.getenv('ALMANAC_DB_PATH', 'data/almanac.db')
@@ -48,7 +50,7 @@ class Config:
             'CORP_ID', 'CORP_SECRET', 'OPEN_KFID', 'EXTERNAL_USERID',
             'SOLAR_TERMS_API_KEY', 'ALMANAC_API_KEY', 'GLM4_API_KEY',
             'LIFE_SUGGESTION_API_KEY', 'DEEPSEEK_API_KEY', 'HOLIDAY_API_KEY',
-            'FEISHU_APP_ID', 'FEISHU_APP_SECRET', 'FEISHU_CHAT_ID_COIN'
+            'FEISHU_APP_ID', 'FEISHU_APP_SECRET', 'FEISHU_CHAT_ID_COIN', 'GOLD_API_KEY'
         ]
         
         missing_keys = []
@@ -57,6 +59,16 @@ class Config:
                 missing_keys.append(key)
         
         return missing_keys
+    
+    @classmethod
+    def init_currency_api(cls):
+        """初始化汇率API"""
+        from currency_api import CurrencyAPI
+        global currency_api
+        if cls.GOLD_API_KEY:
+            currency_api = CurrencyAPI(cls.GOLD_API_KEY)
+            return True
+        return False
 
 # 创建配置实例
 config = Config()

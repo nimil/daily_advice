@@ -1276,3 +1276,178 @@ def test_crypto_news_push():
             'message': f'测试异常: {str(e)}',
             'data': None
         }), 500
+
+@news_integration_bp.route('/news/stock-flow/test', methods=['GET', 'POST'])
+def test_stock_market_flow():
+    """
+    测试大盘资金流向推送功能
+    
+    Returns:
+        JSON: 推送结果
+    """
+    try:
+        import time
+        start_time = time.time()
+        current_app.logger.info("开始测试大盘资金流向推送")
+        
+        # 使用配置中的群组ID
+        chat_id = config.FEISHU_CHAT_ID
+        if not chat_id:
+            return jsonify({
+                'error_code': -1,
+                'message': '未配置群组ID (FEISHU_CHAT_ID)',
+                'data': None
+            }), 400
+        
+        print(f"\n🔍 大盘资金流向推送测试详情:")
+        print(f"📋 群组ID: {chat_id}")
+        
+        # 导入大盘资金流向API
+        from stock_market_flow import stock_market_flow
+        
+        # 获取大盘资金流向数据
+        print("📊 获取大盘资金流向数据...")
+        flow_start = time.time()
+        flow_result = stock_market_flow.get_market_fund_flow()
+        flow_time = time.time() - flow_start
+        print(f"⏱️ 资金流向数据获取耗时: {flow_time:.2f}秒")
+        
+        if flow_result['error_code'] == 0:
+            print("✅ 今日资金流向数据获取成功，开始获取市场数据...")
+            
+            # 获取市场数据（汇率+黄金价格）
+            market_start = time.time()
+            market_result = None
+            try:
+                # 创建汇率API实例
+                from currency_api import CurrencyAPI
+                
+                if config.GOLD_API_KEY:
+                    print(f"🔑 使用API_KEY: {config.GOLD_API_KEY[:10]}...")
+                    currency_api = CurrencyAPI(config.GOLD_API_KEY)
+                    market_result = currency_api.get_all_market_data()
+                    print(f"📊 市场数据获取结果: {market_result.get('error_code', 'N/A')} - {market_result.get('message', 'N/A')}")
+                    
+                    # 显示详细的市场数据信息
+                    if market_result and market_result.get('data'):
+                        market_data = market_result['data']
+                        if market_data.get('currency'):
+                            print(f"💱 汇率数据: 获取成功")
+                        else:
+                            print(f"💱 汇率数据: 获取失败")
+                        
+                        if market_data.get('gold'):
+                            gold_info = market_data['gold']
+                            print(f"🥇 黄金数据: {gold_info.get('price', 'N/A')}元/克")
+                        else:
+                            print(f"🥇 黄金数据: 获取失败")
+                else:
+                    print("⚠️ 未配置GOLD_API_KEY，只获取黄金价格数据")
+                    # 只获取黄金价格（不需要API_KEY）
+                    currency_api = CurrencyAPI("dummy_key")
+                    gold_result = currency_api.get_gold_price()
+                    
+                    if gold_result['error_code'] == 0:
+                        market_result = {
+                            'error_code': 1,  # 部分成功
+                            'data': {
+                                'currency': {},  # 空的汇率数据
+                                'gold': gold_result['data']  # 黄金价格数据
+                            }
+                        }
+                        print(f"🥇 黄金数据: {gold_result['data'].get('price', 'N/A')}元/克")
+                    else:
+                        print(f"❌ 黄金价格获取失败: {gold_result['message']}")
+                        market_result = None
+                        
+            except Exception as e:
+                print(f"❌ 市场数据获取异常: {str(e)}")
+                market_result = None
+            market_time = time.time() - market_start
+            print(f"⏱️ 市场数据获取耗时: {market_time:.2f}秒")
+            
+            # 格式化消息
+            format_start = time.time()
+            formatted_result = stock_market_flow.format_fund_flow_message(flow_result, market_result)
+            format_time = time.time() - format_start
+            print(f"⏱️ 消息格式化耗时: {format_time:.2f}秒")
+            
+            if formatted_result['error_code'] == 0:
+                print("✅ 消息格式化成功，开始发送到飞书...")
+                # 发送大盘资金流向消息到飞书
+                feishu_start = time.time()
+                success = feishu_bot.send_stock_market_flow_message(chat_id, formatted_result)
+                feishu_time = time.time() - feishu_start
+                print(f"⏱️ 飞书发送耗时: {feishu_time:.2f}秒")
+                
+                if success:
+                    total_time = time.time() - start_time
+                    current_app.logger.info(f"大盘资金流向推送测试成功，总耗时: {total_time:.2f}秒")
+                    print(f"✅ 大盘资金流向推送成功，总耗时: {total_time:.2f}秒")
+                    return jsonify({
+                        'error_code': 0,
+                        'message': '大盘资金流向推送成功',
+                        'data': {
+                            'chat_id': chat_id,
+                            'date': formatted_result['data']['date'],
+                            'shanghai_close': formatted_result['data']['shanghai_close'],
+                            'shanghai_change': formatted_result['data']['shanghai_change'],
+                            'push_time': datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S'),
+                            'performance': {
+                                'flow_fetch_time': f"{flow_time:.2f}s",
+                                'format_time': f"{format_time:.2f}s",
+                                'feishu_send_time': f"{feishu_time:.2f}s",
+                                'total_time': f"{total_time:.2f}s"
+                            }
+                        }
+                    })
+                else:
+                    current_app.logger.error("大盘资金流向推送测试失败")
+                    print("❌ 大盘资金流向推送失败")
+                    return jsonify({
+                        'error_code': -1,
+                        'message': '大盘资金流向推送失败',
+                        'data': None
+                    }), 500
+            else:
+                current_app.logger.error(f"消息格式化失败: {formatted_result.get('message')}")
+                print(f"❌ 消息格式化失败: {formatted_result.get('message')}")
+                return jsonify({
+                    'error_code': -1,
+                    'message': f'消息格式化失败: {formatted_result.get("message")}',
+                    'data': None
+                }), 500
+        elif flow_result['error_code'] == 2:
+            # 非今日数据的情况
+            print("ℹ️ 没有今日资金流向数据，跳过发送")
+            return jsonify({
+                'error_code': 0,
+                'message': flow_result['message'],
+                'data': {
+                    'chat_id': chat_id,
+                    'push_time': datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S'),
+                    'performance': {
+                        'flow_fetch_time': f"{flow_time:.2f}s",
+                        'format_time': "0.00s",
+                        'feishu_send_time': "0.00s",
+                        'total_time': f"{time.time() - start_time:.2f}s"
+                    }
+                }
+            })
+        else:
+            current_app.logger.error(f"获取大盘资金流向失败: {flow_result.get('message')}")
+            print(f"❌ 获取大盘资金流向失败: {flow_result.get('message')}")
+            return jsonify({
+                'error_code': -1,
+                'message': f'获取大盘资金流向失败: {flow_result.get("message")}',
+                'data': None
+            }), 500
+        
+    except Exception as e:
+        current_app.logger.error(f"大盘资金流向推送测试异常: {str(e)}")
+        print(f"❌ 大盘资金流向推送测试异常: {str(e)}")
+        return jsonify({
+            'error_code': -1,
+            'message': f'测试异常: {str(e)}',
+            'data': None
+        }), 500

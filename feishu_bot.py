@@ -975,6 +975,97 @@ class FeishuBot:
                     }
                 ]
             }
+    
+    def send_stock_market_flow_message(self, chat_id: str, flow_data: Dict[str, Any]) -> bool:
+        """
+        发送大盘资金流向消息到飞书群组
+        
+        Args:
+            chat_id: 群组ID
+            flow_data: 资金流向数据
+            
+        Returns:
+            bool: 是否发送成功
+        """
+        try:
+            # 创建大盘资金流向交互式消息格式
+            content = self.create_stock_market_flow_interactive_message(flow_data)
+            
+            # 发送交互式消息
+            return self.send_interactive_message(chat_id, content)
+            
+        except Exception as e:
+            logging.error(f"发送大盘资金流向消息失败: {str(e)}")
+            return False
+    
+    def create_stock_market_flow_interactive_message(self, flow_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        创建大盘资金流向交互式消息格式
+        
+        Args:
+            flow_data: 资金流向数据
+            
+        Returns:
+            Dict: 飞书交互式消息格式
+        """
+        try:
+            current_time = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y年%m月%d日 %H:%M:%S')
+            
+            # 提取数据
+            content = flow_data.get('data', {}).get('content', '')
+            date = flow_data.get('data', {}).get('date', '')
+            
+            # 构建交互式消息内容
+            elements = []
+            
+            # 添加资金流向内容
+            elements.append({
+                "tag": "div",
+                "text": {
+                    "tag": "lark_md",
+                    "content": content
+                }
+            })
+            
+            # 构建交互式消息
+            content = {
+                "config": {
+                    "wide_screen_mode": True
+                },
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": f"📊 大盘资金流向 - {current_time}"
+                    }
+                },
+                "elements": elements
+            }
+            
+            return content
+            
+        except Exception as e:
+            logging.error(f"创建大盘资金流向交互式消息失败: {str(e)}")
+            # 返回简单的错误消息
+            return {
+                "config": {
+                    "wide_screen_mode": True
+                },
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": "📊 大盘资金流向"
+                    }
+                },
+                "elements": [
+                    {
+                        "tag": "div",
+                        "text": {
+                            "tag": "lark_md",
+                            "content": "抱歉，生成大盘资金流向消息时出现错误，请稍后重试。"
+                        }
+                    }
+                ]
+            }
 
 # 创建飞书机器人实例
 feishu_bot = FeishuBot()
