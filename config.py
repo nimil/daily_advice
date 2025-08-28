@@ -29,6 +29,7 @@ class Config:
     # 飞书机器人配置
     FEISHU_APP_ID = os.getenv('FEISHU_APP_ID', '')
     FEISHU_APP_SECRET = os.getenv('FEISHU_APP_SECRET', '')
+    FEISHU_CHAT_ID_COIN = os.getenv('FEISHU_CHAT_ID_COIN', '')
     
     # 数据库路径
     SOLAR_TERMS_DB_PATH = os.getenv('SOLAR_TERMS_DB_PATH', 'data/solar_terms.db')
@@ -47,7 +48,7 @@ class Config:
             'CORP_ID', 'CORP_SECRET', 'OPEN_KFID', 'EXTERNAL_USERID',
             'SOLAR_TERMS_API_KEY', 'ALMANAC_API_KEY', 'GLM4_API_KEY',
             'LIFE_SUGGESTION_API_KEY', 'DEEPSEEK_API_KEY', 'HOLIDAY_API_KEY',
-            'FEISHU_APP_ID', 'FEISHU_APP_SECRET'
+            'FEISHU_APP_ID', 'FEISHU_APP_SECRET', 'FEISHU_CHAT_ID_COIN'
         ]
         
         missing_keys = []

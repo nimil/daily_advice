@@ -52,8 +52,7 @@ app.config.update(
 )
 
 # 配置日志
-if not app.debug:
-    # 创建一个按日期滚动的文件处理器，用于记录访问日志
+if not app.debug:    # 创建一个按日期滚动的文件处理器，用于记录访问日志
     from logging.handlers import TimedRotatingFileHandler
     file_handler = TimedRotatingFileHandler(
         'logs/access.log', 

@@ -844,6 +844,137 @@ class FeishuBot:
         except Exception as e:
             logging.error(f"发送新闻消息失败: {str(e)}")
             return False
+    
+    def send_crypto_news_message(self, chat_id: str, news_data: Dict[str, Any]) -> bool:
+        """
+        发送加密货币新闻消息到飞书群组
+        
+        Args:
+            chat_id: 群组ID
+            news_data: 新闻数据
+            
+        Returns:
+            bool: 是否发送成功
+        """
+        try:
+            # 创建加密货币新闻交互式消息格式
+            content = self.create_crypto_news_interactive_message(news_data)
+            
+            # 发送交互式消息
+            return self.send_interactive_message(chat_id, content)
+            
+        except Exception as e:
+            logging.error(f"发送加密货币新闻消息失败: {str(e)}")
+            return False
+    
+    def create_crypto_news_interactive_message(self, news_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        创建加密货币新闻交互式消息格式
+        
+        Args:
+            news_data: 新闻数据
+            
+        Returns:
+            Dict: 飞书交互式消息格式
+        """
+        try:
+            current_time = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y年%m月%d日 %H:%M:%S')
+            
+            # 提取新闻数据
+            news_list = news_data.get('data', {}).get('news_list', [])
+            
+            # 构建交互式消息内容
+            elements = []
+            
+            # 添加新闻列表（最多10条）
+            for i, news in enumerate(news_list[:10], 1):
+                title = news.get('title', '')
+                news_summary = news.get('summary', '')
+                pub_date = news.get('pubDate', '')
+                url = news.get('url', '')
+                
+                # 新闻标题和链接
+                time_display = pub_date if pub_date else "未知时间"
+                
+                news_content = f"{i}. **{title}**\n"
+                if news_summary:
+                    news_content += f"   {news_summary}\n"
+                news_content += f"   ⏰ 时间：{time_display}"
+                
+                elements.append({
+                    "tag": "div",
+                    "text": {
+                        "tag": "lark_md",
+                        "content": news_content
+                    }
+                })
+                
+                # 添加链接按钮
+                if url:
+                    elements.append({
+                        "tag": "action",
+                        "actions": [
+                            {
+                                "tag": "button",
+                                "text": {
+                                    "tag": "plain_text",
+                                    "content": "查看详情"
+                                },
+                                "url": url,
+                                "type": "default"
+                            }
+                        ]
+                    })
+                
+                # 添加空行（除了最后一条新闻）
+                if i < min(len(news_list), 10):
+                    elements.append({
+                        "tag": "div",
+                        "text": {
+                            "tag": "lark_md",
+                            "content": ""
+                        }
+                    })
+            
+            # 构建交互式消息
+            content = {
+                "config": {
+                    "wide_screen_mode": True
+                },
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": f"🚀 加密货币市场动态 - {current_time}"
+                    }
+                },
+                "elements": elements
+            }
+            
+            return content
+            
+        except Exception as e:
+            logging.error(f"创建加密货币新闻交互式消息失败: {str(e)}")
+            # 返回简单的错误消息
+            return {
+                "config": {
+                    "wide_screen_mode": True
+                },
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": "🚀 加密货币市场动态"
+                    }
+                },
+                "elements": [
+                    {
+                        "tag": "div",
+                        "text": {
+                            "tag": "lark_md",
+                            "content": "抱歉，生成加密货币新闻消息时出现错误，请稍后重试。"
+                        }
+                    }
+                ]
+            }
 
 # 创建飞书机器人实例
 feishu_bot = FeishuBot()

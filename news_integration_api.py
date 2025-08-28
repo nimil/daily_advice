@@ -18,9 +18,9 @@ class NewsIntegrationAPI:
     def __init__(self):
         """初始化新闻整合API"""
         self.news_sources = {
-            'jin10': 'https://newsnow.busiyi.world/api/s?id=jin10&latest',
-            'cls_telegraph': 'https://newsnow.busiyi.world/api/s?id=cls-telegraph&latest',
-            'wallstreetcn_hot': 'https://newsnow.busiyi.world/api/s?id=wallstreetcn-hot&latest'
+            'jin10': 'https://newsnow.16781678.xyz/api/s?id=jin10&latest',
+            'cls_telegraph': 'https://newsnow.16781678.xyz/api/s?id=cls-telegraph&latest',
+            'wallstreetcn_hot': 'https://newsnow.16781678.xyz/api/s?id=wallstreetcn-hot&latest'
         }
         
         # 消息来源映射
@@ -83,10 +83,14 @@ class NewsIntegrationAPI:
             data = response.json()
             
             logging.info(f"📋 {source_name} 原始响应数据结构: {list(data.keys()) if isinstance(data, dict) else '非字典类型'}")
+            logging.info(f"📊 {source_name} API状态: {data.get('status', 'unknown')}")
             
-            if data.get('status') == 'success':
+            # 检查API状态 - 支持 'success' 和 'cache' 两种正常状态
+            # 'cache' 状态表示从缓存返回数据，这是正常的，不是错误
+            status = data.get('status')
+            if status in ['success', 'cache']:
                 items = data.get('items', [])
-                logging.info(f"📰 {source_name} 获取到 {len(items)} 条新闻")
+                logging.info(f"📰 {source_name} 获取到 {len(items)} 条新闻 (状态: {status})")
                 
                 # 打印前3条新闻的标题用于调试
                 for i, item in enumerate(items[:3]):
@@ -94,15 +98,15 @@ class NewsIntegrationAPI:
                 
                 return {
                     'error_code': 0,
-                    'message': 'success',
+                    'message': f'success (状态: {status})',
                     'source': source_name,
                     'data': items
                 }
             else:
-                logging.error(f"❌ {source_name} API返回错误状态: {data.get('status')}")
+                logging.error(f"❌ {source_name} API返回错误状态: {status}")
                 return {
                     'error_code': -1,
-                    'message': f'API返回错误状态: {data.get("status")}',
+                    'message': f'API返回错误状态: {status}',
                     'source': source_name,
                     'data': []
                 }
@@ -1156,6 +1160,117 @@ def test_feishu_news_push():
     except Exception as e:
         current_app.logger.error(f"飞书新闻推送测试异常: {str(e)}")
         print(f"❌ 飞书新闻推送测试异常: {str(e)}")
+        return jsonify({
+            'error_code': -1,
+            'message': f'测试异常: {str(e)}',
+            'data': None
+        }), 500
+
+@news_integration_bp.route('/news/crypto/test', methods=['GET', 'POST'])
+def test_crypto_news_push():
+    """
+    测试加密货币新闻推送功能
+    
+    Returns:
+        JSON: 推送结果
+    """
+    try:
+        import time
+        start_time = time.time()
+        current_app.logger.info("开始测试加密货币新闻推送")
+        
+        # 使用配置中的群组ID
+        chat_id = config.FEISHU_CHAT_ID_COIN
+        if not chat_id:
+            return jsonify({
+                'error_code': -1,
+                'message': '未配置加密货币新闻群组ID (FEISHU_CHAT_ID_COIN)',
+                'data': None
+            }), 400
+        
+        print(f"\n🔍 加密货币新闻推送测试详情:")
+        print(f"📋 群组ID: {chat_id}")
+        
+        # 导入加密货币新闻API
+        from crypto_news_api import crypto_news_api
+        
+        # 获取新的加密货币新闻数据
+        print("📰 获取新的加密货币新闻数据...")
+        crypto_start = time.time()
+        crypto_news_result = crypto_news_api.get_new_crypto_news()
+        crypto_time = time.time() - crypto_start
+        print(f"⏱️ 加密货币新闻获取耗时: {crypto_time:.2f}秒")
+        
+        if crypto_news_result['error_code'] == 0:
+            # 检查是否有新新闻
+            news_count = len(crypto_news_result.get('data', {}).get('news_list', []))
+            
+            if news_count > 0:
+                print(f"✅ 发现 {news_count} 条新加密货币新闻，开始发送到飞书...")
+                # 发送加密货币新闻消息到飞书
+                feishu_start = time.time()
+                success = feishu_bot.send_crypto_news_message(chat_id, crypto_news_result)
+                feishu_time = time.time() - feishu_start
+                print(f"⏱️ 飞书发送耗时: {feishu_time:.2f}秒")
+                
+                if success:
+                    total_time = time.time() - start_time
+                    current_app.logger.info(f"加密货币新闻推送测试成功，发送 {news_count} 条新闻，总耗时: {total_time:.2f}秒")
+                    print(f"✅ 加密货币新闻推送成功，总耗时: {total_time:.2f}秒")
+                    return jsonify({
+                        'error_code': 0,
+                        'message': f'加密货币新闻推送成功，发送 {news_count} 条新新闻',
+                        'data': {
+                            'chat_id': chat_id,
+                            'news_count': news_count,
+                            'max_sent_id': crypto_news_api.get_max_sent_id(),
+                            'push_time': datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S'),
+                            'performance': {
+                                'crypto_news_fetch_time': f"{crypto_time:.2f}s",
+                                'feishu_send_time': f"{feishu_time:.2f}s",
+                                'total_time': f"{total_time:.2f}s"
+                            },
+                            'news_summary': crypto_news_result.get('data', {}).get('summary', '')
+                        }
+                    })
+                else:
+                    current_app.logger.error("加密货币新闻推送测试失败")
+                    print("❌ 加密货币新闻推送失败")
+                    return jsonify({
+                        'error_code': -1,
+                        'message': '加密货币新闻推送失败',
+                        'data': None
+                    }), 500
+            else:
+                print("ℹ️ 没有新加密货币新闻，跳过发送")
+                return jsonify({
+                    'error_code': 0,
+                    'message': '没有新加密货币新闻',
+                    'data': {
+                        'chat_id': chat_id,
+                        'news_count': 0,
+                        'max_sent_id': crypto_news_api.get_max_sent_id(),
+                        'push_time': datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S'),
+                        'performance': {
+                            'crypto_news_fetch_time': f"{crypto_time:.2f}s",
+                            'feishu_send_time': "0.00s",
+                            'total_time': f"{time.time() - start_time:.2f}s"
+                        },
+                        'news_summary': '没有新新闻'
+                    }
+                })
+        else:
+            current_app.logger.error(f"获取加密货币新闻失败: {crypto_news_result.get('message')}")
+            print(f"❌ 获取加密货币新闻失败: {crypto_news_result.get('message')}")
+            return jsonify({
+                'error_code': -1,
+                'message': f'获取加密货币新闻失败: {crypto_news_result.get("message")}',
+                'data': None
+            }), 500
+        
+    except Exception as e:
+        current_app.logger.error(f"加密货币新闻推送测试异常: {str(e)}")
+        print(f"❌ 加密货币新闻推送测试异常: {str(e)}")
         return jsonify({
             'error_code': -1,
             'message': f'测试异常: {str(e)}',
