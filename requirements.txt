@@ -1,14 +1,30 @@
+# Web框架
 flask==2.0.1
-requests==2.26.0 
 Werkzeug==2.0.3
-pycryptodome==3.10.1
-pytz==2023.3
-zhipuai
-apscheduler
 waitress==2.1.2
+
+# flask
+# Werkzeug
+# waitress
+
+# HTTP请求
+requests==2.26.0
+
+# 时间处理
+pytz==2023.3
 python-dateutil==2.8.2
+
+# 任务调度
+apscheduler
+
+# AI服务
 openai
+zhipuai
 zai-sdk
-python-dotenv
-akshare
+
+# 数据处理
+akshare==1.16.80
 pandas
+
+# 配置管理
+python-dotenv
