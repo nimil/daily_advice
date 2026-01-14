@@ -1,6 +1,6 @@
 # 使用Python官方镜像作为基础镜像，指定平台为 linux/amd64
 FROM --platform=linux/amd64 python:3.11-slim
-
+RUN echo "http://mirrors.aliyun.com/alpine/v3.11/main/" > /etc/apk/repositories
 # 设置时区为北京时间
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

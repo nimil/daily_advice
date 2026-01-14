@@ -22,7 +22,7 @@ class GLM4Query:
             api_key: 智谱AI API Key
         """
         self.client = ZhipuAiClient(api_key=api_key)
-        self.model = "glm-4.5"  # 使用最新的GLM-4模型
+        self.model = "glm-4.7"  # 使用最新的GLM-4模型
         
     def query(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
         """

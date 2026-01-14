@@ -132,14 +132,15 @@ class StockMarketFlow:
                 'data': {}
             }
     
-    def format_fund_flow_message(self, flow_data: Dict[str, Any], market_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def format_fund_flow_message(self, flow_data: Dict[str, Any], market_data: Optional[Dict[str, Any]] = None, vietnam_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        格式化资金流向消息（包含汇率和黄金价格信息）
-        
+        格式化资金流向消息（包含汇率、黄金价格和越南指数信息）
+
         Args:
             flow_data: 资金流向数据
             market_data: 市场数据（汇率+黄金价格，可选）
-            
+            vietnam_data: 越南指数数据（可选）
+
         Returns:
             Dict: 格式化后的消息数据
         """
@@ -254,6 +255,23 @@ class StockMarketFlow:
 **🥇 黄金价格：**
 • {gold_symbol}：{gold_price:.2f}元/克 ({gold_time})"""
             
+            # 添加越南胡志明指数信息
+            if vietnam_data and vietnam_data.get('error_code') == 0:
+                vn_info = vietnam_data.get('data', {})
+                if vn_info:
+                    vn_name = vn_info.get('index_name', 'VNIndex')
+                    vn_value = vn_info.get('current_value', 0)
+                    vn_change = vn_info.get('change', 0)
+                    vn_change_percent = vn_info.get('change_percent', 0)
+                    vn_emoji = vn_info.get('emoji', '➡️')
+                    vn_time = vn_info.get('time', '')
+
+                    message_content += f"""
+
+**🇻🇳 越南胡志明指数({vn_name})：**
+• {vn_emoji} {vn_value:.2f} ({vn_change:+.2f}, {vn_change_percent:+.2f}%)
+• 更新时间：{vn_time}"""
+
             return {
                 'error_code': 0,
                 'message': '格式化成功',

@@ -9,6 +9,7 @@ from feishu_bot import feishu_bot
 from news_integration_api import NewsIntegrationAPI
 from crypto_news_api import crypto_news_api
 from stock_market_flow import stock_market_flow
+from vietnam_index_api import vietnam_index_api
 from config import config
 import os
 import threading
@@ -199,9 +200,18 @@ def init_scheduler(app):
                     except Exception as e:
                         app.logger.error(f"市场数据获取异常: {str(e)}")
                         market_result = None
-                    
-                    # 格式化消息（包含汇率和黄金价格信息）
-                    formatted_result = stock_market_flow.format_fund_flow_message(flow_result, market_result)
+
+                    # 获取越南胡志明指数数据
+                    vietnam_result = None
+                    try:
+                        vietnam_result = vietnam_index_api.get_vnindex_data()
+                        app.logger.info(f"获取越南指数数据: {vietnam_result}")
+                    except Exception as e:
+                        app.logger.error(f"越南指数数据获取异常: {str(e)}")
+                        vietnam_result = None
+
+                    # 格式化消息（包含汇率、黄金价格和越南指数信息）
+                    formatted_result = stock_market_flow.format_fund_flow_message(flow_result, market_result, vietnam_result)
                     
                     if formatted_result['error_code'] == 0:
                         success = feishu_bot.send_stock_market_flow_message(chat_id, formatted_result)
@@ -219,31 +229,31 @@ def init_scheduler(app):
                 app.logger.error(f"大盘资金流向推送任务异常: {str(e)}")
     
     # 添加每小时刷新缓存的任务
-    scheduler.add_job(
-        func=fetch_daily_advice,
-        trigger=CronTrigger(minute='10'),  # 每小时的第10分钟执行
-        id='fetch_daily_advice',
-        name='获取每日建议',
-        replace_existing=True
-    )
+    # scheduler.add_job(
+    #     func=fetch_daily_advice,
+    #     trigger=CronTrigger(minute='10'),  # 每小时的第10分钟执行
+    #     id='fetch_daily_advice',
+    #     name='获取每日建议',
+    #     replace_existing=True
+    # )
     
     # 添加每天早上10点发送新闻到飞书的任务
     scheduler.add_job(
         func=send_daily_news_to_feishu,
-        trigger=CronTrigger(hour='10', minute='0'),  # 每天早上10点执行
+        trigger=CronTrigger(hour='8', minute='0'),  # 每天早上10点执行
         id='send_daily_news_to_feishu_morning',
-        name='发送每日新闻到飞书（早10点）',
+        name='发送每日新闻到飞书（早8点）',
         replace_existing=True
     )
     
     # 添加每天下午3点半发送新闻到飞书的任务
-    scheduler.add_job(
-        func=send_daily_news_to_feishu,
-        trigger=CronTrigger(hour='15', minute='30'),  # 每天下午3点半执行
-        id='send_daily_news_to_feishu_afternoon',
-        name='发送每日新闻到飞书（下午3点半）',
-        replace_existing=True
-    )
+    # scheduler.add_job(
+    #     func=send_daily_news_to_feishu,
+    #     trigger=CronTrigger(hour='15', minute='30'),  # 每天下午3点半执行
+    #     id='send_daily_news_to_feishu_afternoon',
+    #     name='发送每日新闻到飞书（下午3点半）',
+    #     replace_existing=True
+    # )
     
     # 添加每10分钟发送加密货币新闻到飞书的任务（仅工作日8:30-17:30）
     scheduler.add_job(

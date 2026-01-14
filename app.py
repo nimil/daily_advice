@@ -1,4 +1,4 @@
-from flask import make_response, request
+from flask import make_response, request, jsonify
 import json
 from scheduler import init_scheduler
 import logging
@@ -93,6 +93,140 @@ else:
 
 # 初始化定时任务
 init_scheduler(app)
+
+# 测试越南指数API接口
+@app.route('/api/test/vietnam-index', methods=['GET'])
+def test_vietnam_index():
+    """测试越南胡志明指数API"""
+    use_mock = request.args.get('mock', 'false').lower() == 'true'
+
+    try:
+        from vietnam_index_api import vietnam_index_api
+        if use_mock:
+            result = vietnam_index_api.get_vnindex_data_mock()
+        else:
+            result = vietnam_index_api.get_vnindex_data()
+        return jsonify(result)
+    except Exception as e:
+        app.logger.error(f"测试越南指数API异常: {str(e)}")
+        return jsonify({
+            'error_code': 1,
+            'message': f'测试异常: {str(e)}',
+            'data': {}
+        })
+
+
+# 仅测试越南指数格式化接口
+@app.route('/api/test/vietnam-only', methods=['GET'])
+def test_vietnam_only():
+    """仅测试越南指数在消息中的显示"""
+    try:
+        from stock_market_flow import stock_market_flow
+        from vietnam_index_api import vietnam_index_api
+
+        # 模拟基础资金流向数据
+        mock_flow_data = {
+            'error_code': 0,
+            'data': {
+                'date': '2026-01-14',
+                'shanghai': {
+                    'close': 3200.50,
+                    'change': 15.30
+                },
+                'fund_flow': {
+                    'main': {'net_inflow': 5000000000, 'net_ratio': 2.5},
+                    'super_large': {'net_inflow': 3000000000, 'net_ratio': 1.5},
+                    'large': {'net_inflow': 2000000000, 'net_ratio': 1.0},
+                    'medium': {'net_inflow': -500000000, 'net_ratio': -0.25},
+                    'small': {'net_inflow': -1000000000, 'net_ratio': -0.5}
+                }
+            }
+        }
+
+        # 获取越南指数数据（真实API）
+        vietnam_result = vietnam_index_api.get_vnindex_data()
+
+        # 格式化消息（不包含汇率和黄金，仅越南指数）
+        formatted_result = stock_market_flow.format_fund_flow_message(
+            mock_flow_data,
+            None,  # 不包含汇率和黄金
+            vietnam_result
+        )
+
+        return jsonify(formatted_result)
+
+    except Exception as e:
+        app.logger.error(f"测试越南指数仅显示异常: {str(e)}")
+        return jsonify({
+            'error_code': 1,
+            'message': f'测试异常: {str(e)}',
+            'data': {}
+        })
+
+# 专门测试越南指数发送功能的接口
+@app.route('/api/test/vietnam-market-send', methods=['GET'])
+def test_vietnam_market_send():
+    """专门测试越南指数市场消息发送功能（使用真实越南指数数据）"""
+    try:
+        from stock_market_flow import stock_market_flow
+        from vietnam_index_api import vietnam_index_api
+
+        # 创建模拟的完整市场数据（包含资金流向）
+        mock_flow_data = {
+            'error_code': 0,
+            'data': {
+                'date': '2026-01-14',
+                'shanghai': {
+                    'close': 3200.50,
+                    'change': 15.30
+                },
+                'fund_flow': {
+                    'main': {'net_inflow': 5000000000, 'net_ratio': 2.5},
+                    'super_large': {'net_inflow': 3000000000, 'net_ratio': 1.5},
+                    'large': {'net_inflow': 2000000000, 'net_ratio': 1.0},
+                    'medium': {'net_inflow': -500000000, 'net_ratio': -0.25},
+                    'small': {'net_inflow': -1000000000, 'net_ratio': -0.5}
+                }
+            }
+        }
+
+        # 获取越南指数数据（真实API）
+        vietnam_result = vietnam_index_api.get_vnindex_data()
+
+        # 格式化消息（仅包含资金流向和越南指数）
+        formatted_result = stock_market_flow.format_fund_flow_message(
+            mock_flow_data,
+            None,  # 不包含汇率和黄金
+            vietnam_result
+        )
+
+        if formatted_result['error_code'] == 0:
+            # 返回格式化的消息内容，模拟飞书发送的消息格式
+            message_content = formatted_result['data']['content']
+
+            return jsonify({
+                'error_code': 0,
+                'message': '越南指数市场消息格式化成功',
+                'data': {
+                    'content': message_content,
+                    'preview': message_content,
+                    'description': '此消息将包含越南胡志明指数数据，每天下午3:10自动发送到飞书群组'
+                }
+            })
+        else:
+            return jsonify({
+                'error_code': 1,
+                'message': '消息格式化失败',
+                'data': {}
+            })
+
+    except Exception as e:
+        app.logger.error(f"测试越南指数发送功能异常: {str(e)}")
+        return jsonify({
+            'error_code': 1,
+            'message': f'测试异常: {str(e)}',
+            'data': {}
+        })
 
 # 启动Flask应用
 if __name__ == '__main__':
