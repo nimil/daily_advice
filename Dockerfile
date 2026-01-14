@@ -9,7 +9,8 @@ WORKDIR /app
 
 # 复制依赖文件
 COPY requirements.txt .
-
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
 # 安装依赖
 RUN pip install -r requirements.txt
 
